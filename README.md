@@ -4,12 +4,12 @@ A command-line tool for managing chat rooms on [Retro AIM Server](https://github
 
 ## Features
 
-- 📋 **List chat rooms** - View all public or private chat rooms with participant details
-- 🏗️ **Create public rooms** - Add new public chat rooms via API
-- 🗑️ **Delete rooms** - Remove both public and private rooms (direct database access)
-- ⚙️ **Configurable** - Use custom config files for different server environments
-- 🔒 **Permission checking** - Validates database access before operations
-- 🎯 **Error handling** - Clear error messages and troubleshooting guidance
+- List chat rooms - View all public or private chat rooms with participant details
+- Create public rooms - Add new public chat rooms via API
+- Delete rooms - Remove both public and private rooms (direct database access)
+- Configurable - Use custom config files for different server environments
+- Permission checking - Validates database access before operations
+- Error handling - Clear error messages and troubleshooting guidance
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ A command-line tool for managing chat rooms on [Retro AIM Server](https://github
 
 1. Clone or download the script:
    ```bash
-   wget https://raw.githubusercontent.com/youngd24/ras-room-mgr
+   wget https://raw.githubusercontent.com/your-repo/ras-room-mgr/main/ras-room-mgr.py
    chmod +x ras-room-mgr.py
    ```
 
@@ -45,7 +45,7 @@ A command-line tool for managing chat rooms on [Retro AIM Server](https://github
 # List all public chat rooms
 ./ras-room-mgr.py get public
 
-# List all private chat rooms  
+# List all private chat rooms
 ./ras-room-mgr.py get private
 
 # Create a new public chat room
@@ -106,7 +106,7 @@ If you encounter permission errors:
 # Option 1: Run with sudo
 sudo ./ras-room-mgr.py delete public "Room Name"
 
-# Option 2: Fix file permissions  
+# Option 2: Fix file permissions
 sudo chmod 666 /usr/local/ras/oscar.sqlite
 
 # Option 3: Add user to appropriate group
@@ -141,7 +141,7 @@ sudo usermod -a -G ras-group $USER
 # Development
 ./ras-room-mgr.py get public
 
-# Production  
+# Production
 ./ras-room-mgr.py --config-file production.ini get public
 
 # Testing
@@ -154,7 +154,7 @@ sudo usermod -a -G ras-group $USER
 ```
 RAS Room Manager - Retro AIM Server Room Management
 =======================================================
-✓ Loaded server URL from config: http://localhost:8080
+Loaded server URL from config: http://localhost:8080
 Connecting to: http://localhost:8080/chat/room/public
 
 Found 2 public chat room(s):
@@ -173,25 +173,25 @@ Room 2: Tech Support
     - No participants
 --------------------------------------------------------------------------------
 
-✓ Successfully retrieved 2 public chat room(s).
+Successfully retrieved 2 public chat room(s).
 ```
 
 ### Creating Rooms
 ```
 Creating public chat room: 'New Discussion'
 Sending POST request to: http://localhost:8080/chat/room/public
-✓ Public chat room 'New Discussion' created successfully!
+Public chat room 'New Discussion' created successfully!
 
-🎉 Successfully created public chat room: 'New Discussion'
+Successfully created public chat room: 'New Discussion'
 ```
 
 ### Deleting Rooms
 ```
 Deleting public chat room: 'Old Room'
 Executing direct database deletion...
-✓ Public chat room 'Old Room' deleted successfully!
+Public chat room 'Old Room' deleted successfully!
 
-🗑️  Successfully deleted public chat room: 'Old Room'
+Successfully deleted public chat room: 'Old Room'
 ```
 
 ## Error Handling
@@ -199,7 +199,7 @@ Executing direct database deletion...
 The tool provides clear error messages for common issues:
 
 - **Server not running**: Connection refused errors with troubleshooting tips
-- **Permission issues**: Detailed permission analysis and fix suggestions  
+- **Permission issues**: Detailed permission analysis and fix suggestions
 - **Invalid room names**: Validation error messages
 - **API limitations**: Clear explanations when operations aren't supported
 
