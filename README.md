@@ -22,7 +22,7 @@ A command-line tool for managing chat rooms on [Retro AIM Server](https://github
 
 1. Clone or download the script:
    ```bash
-   wget https://raw.githubusercontent.com/your-repo/ras-room-mgr/main/ras-room-mgr.py
+   wget https://raw.githubusercontent.com/youngd24/ras-room-mgr
    chmod +x ras-room-mgr.py
    ```
 
