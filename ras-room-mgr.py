@@ -9,12 +9,15 @@ import json
 import sys
 import argparse
 import os
+import subprocess
 from datetime import datetime
 from configparser import ConfigParser
 
 class RASRoomManager:
     def __init__(self, config_file="config.ini"):
         self.base_url = self._load_config(config_file)
+        self.sqlite_path = "/usr/local/ras/oscar.sqlite"
+        self.sqlite_cmd = "/usr/bin/sqlite3"
     
     def _get_rooms_endpoint(self, room_type):
         """
@@ -196,6 +199,73 @@ class RASRoomManager:
             print(f"✗ Unexpected error: {e}")
             return False
 
+    def delete_chat_room(self, room_name, room_type):
+        """
+        Deletes a chat room by directly removing it from the SQLite database.
+        
+        Args:
+            room_name (str): Name of the chat room to delete
+            room_type (str): Either 'public' or 'private' (for display purposes)
+            
+        Returns:
+            bool: True if room was deleted successfully, False otherwise
+        """
+        if not self._validate_room_name(room_name):
+            return False
+        
+        # Check if database file exists
+        if not os.path.exists(self.sqlite_path):
+            print(f"✗ Error: Database file not found at {self.sqlite_path}")
+            return False
+        
+        # Check if sqlite3 command exists
+        if not os.path.exists(self.sqlite_cmd):
+            print(f"✗ Error: SQLite command not found at {self.sqlite_cmd}")
+            return False
+        
+        try:
+            print(f"Deleting {room_type} chat room: '{room_name}'")
+            print(f"Executing direct database deletion...")
+            
+            # Escape single quotes for SQL safety
+            escaped_name = room_name.replace("'", "''")
+            sql_query = "DELETE FROM chatRoom WHERE name = '" + escaped_name + "'"
+            
+            # Execute the sqlite command
+            result = subprocess.run(
+                [self.sqlite_cmd, self.sqlite_path, sql_query],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            # Check if the room still exists to verify deletion
+            check_query = "SELECT COUNT(*) FROM chatRoom WHERE name = '" + escaped_name + "'"
+            check_result = subprocess.run(
+                [self.sqlite_cmd, self.sqlite_path, check_query],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            room_count = int(check_result.stdout.strip())
+            
+            if room_count == 0:
+                print(f"✓ {room_type.capitalize()} chat room '{room_name}' deleted successfully!")
+                return True
+            else:
+                print(f"⚠ Warning: Room '{room_name}' may not have existed or deletion failed.")
+                return False
+                
+        except subprocess.CalledProcessError as e:
+            print(f"✗ Error executing SQLite command: {e}")
+            if e.stderr:
+                print(f"  SQLite error: {e.stderr}")
+            return False
+        except Exception as e:
+            print(f"✗ Unexpected error during deletion: {e}")
+            return False
+
     def _validate_room_name(self, room_name):
         """
         Validates the chat room name.
@@ -226,14 +296,16 @@ Examples:
   %(prog)s get public                              # List all public chat rooms
   %(prog)s get private                             # List all private chat rooms
   %(prog)s create public "General Chat"           # Create a public room
+  %(prog)s delete public "Old Room"               # Delete a public room
+  %(prog)s delete private "Secret Room"           # Delete a private room
   %(prog)s --config-file myserver.ini              # Use custom config file
         """
     )
     
     parser.add_argument(
         "action",
-        choices=["get", "create"],
-        help="Action to perform: 'get' to list rooms, 'create' to create a new room"
+        choices=["get", "create", "delete"],
+        help="Action to perform: 'get' to list rooms, 'create' to create a new room, 'delete' to delete a room"
     )
     
     parser.add_argument(
@@ -245,7 +317,7 @@ Examples:
     parser.add_argument(
         "room_name",
         nargs="?",
-        help="Name of the room to create (required for 'create' action)"
+        help="Name of the room to create or delete (required for 'create' and 'delete' actions)"
     )
     
     parser.add_argument(
@@ -280,7 +352,6 @@ Examples:
             print("✗ Error: Room name is required for 'create' action.")
             print("\nUsage examples:")
             print("  python ras-room-mgr.py create public \"My Public Room\"")
-            print("  python ras-room-mgr.py create private \"My Private Room\"")
             sys.exit(1)
         
         # Create the chat room
@@ -294,6 +365,29 @@ Examples:
             sys.exit(0)
         else:
             print(f"\n❌ Failed to create {args.room_type} chat room: '{room_name}'")
+            sys.exit(1)
+    
+    elif args.action == "delete":
+        # Get room name from positional argument
+        room_name = args.room_name
+        
+        if not room_name:
+            print("✗ Error: Room name is required for 'delete' action.")
+            print("\nUsage examples:")
+            print("  python ras-room-mgr.py delete public \"Room to Delete\"")
+            print("  python ras-room-mgr.py delete private \"Private Room to Delete\"")
+            sys.exit(1)
+        
+        # Delete the chat room
+        success = room_manager.delete_chat_room(room_name, args.room_type)
+        
+        if success:
+            print(f"\n🗑️  Successfully deleted {args.room_type} chat room: '{room_name}'")
+            print("\nYou can now:")
+            print(f"- Run 'python ras-room-mgr.py get {args.room_type}' to verify the room was deleted")
+            sys.exit(0)
+        else:
+            print(f"\n❌ Failed to delete {args.room_type} chat room: '{room_name}'")
             sys.exit(1)
 
 if __name__ == "__main__":
