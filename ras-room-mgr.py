@@ -223,6 +223,10 @@ class RASRoomManager:
             print(f"✗ Error: SQLite command not found at {self.sqlite_cmd}")
             return False
         
+        # Check database file permissions
+        if not self._check_database_permissions():
+            return False
+        
         try:
             print(f"Deleting {room_type} chat room: '{room_name}'")
             print(f"Executing direct database deletion...")
@@ -264,6 +268,47 @@ class RASRoomManager:
             return False
         except Exception as e:
             print(f"✗ Unexpected error during deletion: {e}")
+            return False
+
+    def _check_database_permissions(self):
+        """
+        Check if the current user has read/write permissions to the database file.
+        
+        Returns:
+            bool: True if permissions are sufficient, False otherwise
+        """
+        import getpass
+        import stat
+        
+        current_user = getpass.getuser()
+        
+        try:
+            # Get file stats
+            file_stat = os.stat(self.sqlite_path)
+            file_mode = file_stat.st_mode
+            
+            # Check if file is readable and writable by current user
+            is_readable = os.access(self.sqlite_path, os.R_OK)
+            is_writable = os.access(self.sqlite_path, os.W_OK)
+            
+            if not is_readable or not is_writable:
+                print(f"✗ Error: Insufficient permissions for database file.")
+                print(f"  Current user: {current_user}")
+                print(f"  Database file: {self.sqlite_path}")
+                print(f"  File permissions: {stat.filemode(file_mode)}")
+                print(f"  Read access: {'✓' if is_readable else '✗'}")
+                print(f"  Write access: {'✓' if is_writable else '✗'}")
+                print(f"")
+                print(f"  Possible solutions:")
+                print(f"  - Run the script as a user with database access (e.g., sudo)")
+                print(f"  - Change file permissions: sudo chmod 666 {self.sqlite_path}")
+                print(f"  - Add current user to the appropriate group")
+                return False
+            
+            return True
+            
+        except OSError as e:
+            print(f"✗ Error checking file permissions: {e}")
             return False
 
     def _validate_room_name(self, room_name):
