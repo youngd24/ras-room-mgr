@@ -15,7 +15,18 @@ from configparser import ConfigParser
 class RASRoomManager:
     def __init__(self, config_file="config.ini"):
         self.base_url = self._load_config(config_file)
-        self.rooms_endpoint = f"{self.base_url}/chat/room/public"
+    
+    def _get_rooms_endpoint(self, room_type):
+        """
+        Get the appropriate endpoint for the room type.
+        
+        Args:
+            room_type (str): Either 'public' or 'private'
+            
+        Returns:
+            str: The full endpoint URL
+        """
+        return f"{self.base_url}/chat/room/{room_type}"
     
     def _load_config(self, config_file):
         """
@@ -51,24 +62,29 @@ class RASRoomManager:
             print(f"✓ Using default URL: {default_url}")
             return default_url
 
-    def get_public_chat_rooms(self):
+    def get_chat_rooms(self, room_type):
         """
-        Retrieves and displays all public chat rooms.
+        Retrieves and displays all chat rooms of the specified type.
+        
+        Args:
+            room_type (str): Either 'public' or 'private'
         
         Returns:
-            list: List of public chat rooms, or None if error occurred
+            list: List of chat rooms, or None if error occurred
         """
+        rooms_endpoint = self._get_rooms_endpoint(room_type)
+        
         try:
-            print(f"Connecting to: {self.rooms_endpoint}")
-            response = requests.get(self.rooms_endpoint)
+            print(f"Connecting to: {rooms_endpoint}")
+            response = requests.get(rooms_endpoint)
             response.raise_for_status()
             
             chat_rooms = response.json()
             
-            print(f"\nFound {len(chat_rooms)} public chat room(s):\n")
+            print(f"\nFound {len(chat_rooms)} {room_type} chat room(s):\n")
             
             if not chat_rooms:
-                print("No public chat rooms found.")
+                print(f"No {room_type} chat rooms found.")
                 return chat_rooms
             
             print("-" * 80)
@@ -113,37 +129,47 @@ class RASRoomManager:
                 print(f"  Response: {response.text}")
             return None
         except requests.exceptions.RequestException as e:
-            print(f"✗ Error fetching public chat rooms: {e}")
+            print(f"✗ Error fetching {room_type} chat rooms: {e}")
             return None
         except json.JSONDecodeError as e:
             print(f"✗ Error parsing JSON response: {e}")
             print(f"  Raw response: {response.text}")
             return None
 
-    def create_chat_room(self, room_name):
+    def create_chat_room(self, room_name, room_type):
         """
-        Creates a new public chat room.
+        Creates a new chat room of the specified type.
         
         Args:
             room_name (str): Name of the chat room to create
+            room_type (str): Either 'public' or 'private'
             
         Returns:
             bool: True if room was created successfully, False otherwise
         """
+        # Check if trying to create private room (not supported)
+        if room_type == "private":
+            print("✗ Error: Creating private chat rooms is not supported by the server.")
+            print("  Only public chat rooms can be created through the API.")
+            return False
+            
+        # Validate room name
         if not self._validate_room_name(room_name):
             return False
         
+        # Only proceed if room_type is public
+        rooms_endpoint = self._get_rooms_endpoint(room_type)
         payload = {"name": room_name}
         headers = {"Content-Type": "application/json"}
         
         try:
-            print(f"Creating chat room: '{room_name}'")
-            print(f"Sending POST request to: {self.rooms_endpoint}")
+            print(f"Creating {room_type} chat room: '{room_name}'")
+            print(f"Sending POST request to: {rooms_endpoint}")
             
-            response = requests.post(self.rooms_endpoint, json=payload, headers=headers)
+            response = requests.post(rooms_endpoint, json=payload, headers=headers)
             
             if response.status_code == 201:
-                print(f"✓ Chat room '{room_name}' created successfully!")
+                print(f"✓ {room_type.capitalize()} chat room '{room_name}' created successfully!")
                 return True
             elif response.status_code == 400:
                 print(f"✗ Bad request: Invalid input data.")
@@ -151,7 +177,7 @@ class RASRoomManager:
                     print(f"  Server response: {response.text}")
                 return False
             elif response.status_code == 409:
-                print(f"✗ Chat room '{room_name}' already exists.")
+                print(f"✗ {room_type.capitalize()} chat room '{room_name}' already exists.")
                 return False
             else:
                 print(f"✗ Unexpected response status: {response.status_code}")
@@ -164,7 +190,7 @@ class RASRoomManager:
             print(f"  Make sure the retro AIM server is running at: {self.base_url}")
             return False
         except requests.exceptions.RequestException as e:
-            print(f"✗ Error creating chat room: {e}")
+            print(f"✗ Error creating {room_type} chat room: {e}")
             return False
         except Exception as e:
             print(f"✗ Unexpected error: {e}")
@@ -197,9 +223,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s get                                         # List all public chat rooms
-  %(prog)s create "General Chat"                       # Create a room named "General Chat"
-  %(prog)s --config-file myserver.ini                  # Use custom config file
+  %(prog)s get public                              # List all public chat rooms
+  %(prog)s get private                             # List all private chat rooms
+  %(prog)s create public "General Chat"           # Create a public room
+  %(prog)s --config-file myserver.ini              # Use custom config file
         """
     )
     
@@ -207,6 +234,12 @@ Examples:
         "action",
         choices=["get", "create"],
         help="Action to perform: 'get' to list rooms, 'create' to create a new room"
+    )
+    
+    parser.add_argument(
+        "room_type",
+        choices=["public", "private"],
+        help="Type of chat room: 'public' or 'private'"
     )
     
     parser.add_argument(
@@ -230,13 +263,13 @@ Examples:
     room_manager = RASRoomManager(args.config_file)
     
     if args.action == "get":
-        # List all public chat rooms
-        rooms = room_manager.get_public_chat_rooms()
+        # List all chat rooms of the specified type
+        rooms = room_manager.get_chat_rooms(args.room_type)
         if rooms is not None:
-            print(f"\n✓ Successfully retrieved {len(rooms)} chat room(s).")
+            print(f"\n✓ Successfully retrieved {len(rooms)} {args.room_type} chat room(s).")
             sys.exit(0)
         else:
-            print("\n✗ Failed to retrieve chat rooms.")
+            print(f"\n✗ Failed to retrieve {args.room_type} chat rooms.")
             sys.exit(1)
     
     elif args.action == "create":
@@ -245,21 +278,22 @@ Examples:
         
         if not room_name:
             print("✗ Error: Room name is required for 'create' action.")
-            print("\nUsage example:")
-            print("  python ras-room-mgr.py create \"My Room\"")
+            print("\nUsage examples:")
+            print("  python ras-room-mgr.py create public \"My Public Room\"")
+            print("  python ras-room-mgr.py create private \"My Private Room\"")
             sys.exit(1)
         
         # Create the chat room
-        success = room_manager.create_chat_room(room_name)
+        success = room_manager.create_chat_room(room_name, args.room_type)
         
         if success:
-            print(f"\n🎉 Successfully created chat room: '{room_name}'")
+            print(f"\n🎉 Successfully created {args.room_type} chat room: '{room_name}'")
             print("\nYou can now:")
-            print("- Run 'python ras-room-mgr.py get' to verify the room was created")
+            print(f"- Run 'python ras-room-mgr.py get {args.room_type}' to verify the room was created")
             print("- Connect with an AIM client to join the room")
             sys.exit(0)
         else:
-            print(f"\n❌ Failed to create chat room: '{room_name}'")
+            print(f"\n❌ Failed to create {args.room_type} chat room: '{room_name}'")
             sys.exit(1)
 
 if __name__ == "__main__":
