@@ -45,7 +45,7 @@ class RASRoomManager:
         
         # Check if config file exists
         if not os.path.exists(config_file):
-            print(f"⚠ Config file {config_file} not found, using default URL: {default_url}")
+            print(f"Config file {config_file} not found, using default URL: {default_url}")
             return default_url
         
         try:
@@ -54,15 +54,15 @@ class RASRoomManager:
             
             if 'server' in config and 'base_url' in config['server']:
                 url = config['server']['base_url']
-                print(f"✓ Loaded server URL from config: {url}")
+                print(f"Loaded server URL from config: {url}")
                 return url
             else:
-                print(f"⚠ Warning: Invalid config format in {config_file}, using default URL")
+                print(f"Warning: Invalid config format in {config_file}, using default URL")
                 return default_url
                 
         except Exception as e:
-            print(f"⚠ Warning: Error reading config file {config_file}: {e}")
-            print(f"✓ Using default URL: {default_url}")
+            print(f"Warning: Error reading config file {config_file}: {e}")
+            print(f"Using default URL: {default_url}")
             return default_url
 
     def get_chat_rooms(self, room_type):
@@ -122,20 +122,20 @@ class RASRoomManager:
             return chat_rooms
             
         except requests.exceptions.ConnectionError:
-            print("✗ Error: Could not connect to the server.")
+            print("Error: Could not connect to the server.")
             print(f"  Make sure the retro AIM server is running at: {self.base_url}")
             return None
         except requests.exceptions.HTTPError as e:
-            print(f"✗ HTTP Error: {e}")
+            print(f"HTTP Error: {e}")
             print(f"  Status Code: {response.status_code}")
             if response.text:
                 print(f"  Response: {response.text}")
             return None
         except requests.exceptions.RequestException as e:
-            print(f"✗ Error fetching {room_type} chat rooms: {e}")
+            print(f"Error fetching {room_type} chat rooms: {e}")
             return None
         except json.JSONDecodeError as e:
-            print(f"✗ Error parsing JSON response: {e}")
+            print(f"Error parsing JSON response: {e}")
             print(f"  Raw response: {response.text}")
             return None
 
@@ -152,7 +152,7 @@ class RASRoomManager:
         """
         # Check if trying to create private room (not supported)
         if room_type == "private":
-            print("✗ Error: Creating private chat rooms is not supported by the server.")
+            print("Error: Creating private chat rooms is not supported by the server.")
             print("  Only public chat rooms can be created through the API.")
             return False
             
@@ -172,31 +172,31 @@ class RASRoomManager:
             response = requests.post(rooms_endpoint, json=payload, headers=headers)
             
             if response.status_code == 201:
-                print(f"✓ {room_type.capitalize()} chat room '{room_name}' created successfully!")
+                print(f"{room_type.capitalize()} chat room '{room_name}' created successfully!")
                 return True
             elif response.status_code == 400:
-                print(f"✗ Bad request: Invalid input data.")
+                print(f"Bad request: Invalid input data.")
                 if response.text:
                     print(f"  Server response: {response.text}")
                 return False
             elif response.status_code == 409:
-                print(f"✗ {room_type.capitalize()} chat room '{room_name}' already exists.")
+                print(f"{room_type.capitalize()} chat room '{room_name}' already exists.")
                 return False
             else:
-                print(f"✗ Unexpected response status: {response.status_code}")
+                print(f"Unexpected response status: {response.status_code}")
                 if response.text:
                     print(f"  Server response: {response.text}")
                 return False
                 
         except requests.exceptions.ConnectionError:
-            print("✗ Error: Could not connect to the server.")
+            print("Error: Could not connect to the server.")
             print(f"  Make sure the retro AIM server is running at: {self.base_url}")
             return False
         except requests.exceptions.RequestException as e:
-            print(f"✗ Error creating {room_type} chat room: {e}")
+            print(f"Error creating {room_type} chat room: {e}")
             return False
         except Exception as e:
-            print(f"✗ Unexpected error: {e}")
+            print(f"Unexpected error: {e}")
             return False
 
     def delete_chat_room(self, room_name, room_type):
@@ -215,12 +215,12 @@ class RASRoomManager:
         
         # Check if database file exists
         if not os.path.exists(self.sqlite_path):
-            print(f"✗ Error: Database file not found at {self.sqlite_path}")
+            print(f"Error: Database file not found at {self.sqlite_path}")
             return False
         
         # Check if sqlite3 command exists
         if not os.path.exists(self.sqlite_cmd):
-            print(f"✗ Error: SQLite command not found at {self.sqlite_cmd}")
+            print(f"Error: SQLite command not found at {self.sqlite_cmd}")
             return False
         
         # Check database file permissions
@@ -255,19 +255,19 @@ class RASRoomManager:
             room_count = int(check_result.stdout.strip())
             
             if room_count == 0:
-                print(f"✓ {room_type.capitalize()} chat room '{room_name}' deleted successfully!")
+                print(f"{room_type.capitalize()} chat room '{room_name}' deleted successfully!")
                 return True
             else:
-                print(f"⚠ Warning: Room '{room_name}' may not have existed or deletion failed.")
+                print(f"Warning: Room '{room_name}' may not have existed or deletion failed.")
                 return False
                 
         except subprocess.CalledProcessError as e:
-            print(f"✗ Error executing SQLite command: {e}")
+            print(f"Error executing SQLite command: {e}")
             if e.stderr:
                 print(f"  SQLite error: {e.stderr}")
             return False
         except Exception as e:
-            print(f"✗ Unexpected error during deletion: {e}")
+            print(f"Unexpected error during deletion: {e}")
             return False
 
     def _check_database_permissions(self):
@@ -292,23 +292,23 @@ class RASRoomManager:
             is_writable = os.access(self.sqlite_path, os.W_OK)
             
             if not is_readable or not is_writable:
-                print(f"✗ Error: Insufficient permissions for database file.")
+                print(f"Error: Insufficient permissions for database file.")
                 print(f"  Current user: {current_user}")
                 print(f"  Database file: {self.sqlite_path}")
                 print(f"  File permissions: {stat.filemode(file_mode)}")
-                print(f"  Read access: {'✓' if is_readable else '✗'}")
-                print(f"  Write access: {'✓' if is_writable else '✗'}")
-                print(f"")
-                print(f"  Possible solutions:")
-                print(f"  - Run the script as a user with database access (e.g., sudo)")
+                print(f"  Read access: {'Yes' if is_readable else 'No'}")
+                print(f"  Write access: {'Yes' if is_writable else 'No'}")
+                print("")
+                print("  Possible solutions:")
+                print("  - Run the script as a user with database access (e.g., sudo)")
                 print(f"  - Change file permissions: sudo chmod 666 {self.sqlite_path}")
-                print(f"  - Add current user to the appropriate group")
+                print("  - Add current user to the appropriate group")
                 return False
             
             return True
             
         except OSError as e:
-            print(f"✗ Error checking file permissions: {e}")
+            print(f"Error checking file permissions: {e}")
             return False
 
     def _validate_room_name(self, room_name):
@@ -322,11 +322,11 @@ class RASRoomManager:
             bool: True if valid, False otherwise
         """
         if not room_name:
-            print("✗ Error: Room name cannot be empty.")
+            print(f"Error: Room name cannot be empty.")
             return False
         
         if not room_name.strip():
-            print("✗ Error: Room name cannot be only whitespace.")
+            print(f"Error: Room name cannot be only whitespace.")
             return False
         
         return True
@@ -373,8 +373,8 @@ Examples:
     
     args = parser.parse_args()
     
-    print("RAS Room Manager - Retro AIM Server Room Management")
-    print("=" * 55)
+    print(f"RAS Room Manager - Retro AIM Server Room Management")
+    print(f"=" * 55)
     
     # Initialize the room manager
     room_manager = RASRoomManager(args.config_file)
@@ -383,10 +383,10 @@ Examples:
         # List all chat rooms of the specified type
         rooms = room_manager.get_chat_rooms(args.room_type)
         if rooms is not None:
-            print(f"\n✓ Successfully retrieved {len(rooms)} {args.room_type} chat room(s).")
+            print(f"\nSuccessfully retrieved {len(rooms)} {args.room_type} chat room(s).")
             sys.exit(0)
         else:
-            print(f"\n✗ Failed to retrieve {args.room_type} chat rooms.")
+            print(f"\nFailed to retrieve {args.room_type} chat rooms.")
             sys.exit(1)
     
     elif args.action == "create":
@@ -394,7 +394,7 @@ Examples:
         room_name = args.room_name
         
         if not room_name:
-            print("✗ Error: Room name is required for 'create' action.")
+            print("Error: Room name is required for 'create' action.")
             print("\nUsage examples:")
             print("  python ras-room-mgr.py create public \"My Public Room\"")
             sys.exit(1)
@@ -403,13 +403,13 @@ Examples:
         success = room_manager.create_chat_room(room_name, args.room_type)
         
         if success:
-            print(f"\n🎉 Successfully created {args.room_type} chat room: '{room_name}'")
+            print(f"\nSuccessfully created {args.room_type} chat room: '{room_name}'")
             print("\nYou can now:")
             print(f"- Run 'python ras-room-mgr.py get {args.room_type}' to verify the room was created")
             print("- Connect with an AIM client to join the room")
             sys.exit(0)
         else:
-            print(f"\n❌ Failed to create {args.room_type} chat room: '{room_name}'")
+            print(f"\nFailed to create {args.room_type} chat room: '{room_name}'")
             sys.exit(1)
     
     elif args.action == "delete":
@@ -417,7 +417,7 @@ Examples:
         room_name = args.room_name
         
         if not room_name:
-            print("✗ Error: Room name is required for 'delete' action.")
+            print("Error: Room name is required for 'delete' action.")
             print("\nUsage examples:")
             print("  python ras-room-mgr.py delete public \"Room to Delete\"")
             print("  python ras-room-mgr.py delete private \"Private Room to Delete\"")
@@ -427,12 +427,12 @@ Examples:
         success = room_manager.delete_chat_room(room_name, args.room_type)
         
         if success:
-            print(f"\n🗑️  Successfully deleted {args.room_type} chat room: '{room_name}'")
+            print(f"\nSuccessfully deleted {args.room_type} chat room: '{room_name}'")
             print("\nYou can now:")
             print(f"- Run 'python ras-room-mgr.py get {args.room_type}' to verify the room was deleted")
             sys.exit(0)
         else:
-            print(f"\n❌ Failed to delete {args.room_type} chat room: '{room_name}'")
+            print(f"\nFailed to delete {args.room_type} chat room: '{room_name}'")
             sys.exit(1)
 
 if __name__ == "__main__":
