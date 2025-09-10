@@ -29,7 +29,7 @@ class RASRegressionTest:
     def run_command(self, args):
         """Run a RAS room manager command and return result."""
         try:
-            cmd = [self.script_path] + args
+            cmd = ["sudo", self.script_path] + args
             result = subprocess.run(
                 cmd,
                 capture_output=True,
