@@ -13,6 +13,22 @@ import subprocess
 from datetime import datetime
 from configparser import ConfigParser
 
+class ChatRoom:
+    def __init__(self, room_type, name, create_time=None, participants=None):
+        """
+        Represents a chat room with its properties.
+        
+        Args:
+            room_type (str): Either 'public' or 'private'
+            name (str): Name of the chat room
+            create_time (str, optional): ISO format timestamp when room was created
+            participants (list, optional): List of participant dictionaries
+        """
+        self.type = room_type
+        self.name = name
+        self.create_time = create_time
+        self.participants = participants or []
+
 class RASRoomManager:
     def __init__(self, config_file="config.ini"):
         self.base_url = self._load_config(config_file)
@@ -73,7 +89,7 @@ class RASRoomManager:
             room_type (str): Either 'public' or 'private'
         
         Returns:
-            list: List of chat rooms, or None if error occurred
+            list: List of ChatRoom objects, or None if error occurred
         """
         rooms_endpoint = self._get_rooms_endpoint(room_type)
         
@@ -82,47 +98,32 @@ class RASRoomManager:
             response = requests.get(rooms_endpoint)
             response.raise_for_status()
             
-            chat_rooms = response.json()
+            rooms_data = response.json()
             
-            print(f"\nFound {len(chat_rooms)} {room_type} chat room(s):\n")
+            print(f"\nFound {len(rooms_data)} {room_type} chat room(s):\n")
             
-            if not chat_rooms:
+            if not rooms_data:
                 print(f"No {room_type} chat rooms found.")
-                return chat_rooms
+                return []
             
-            print("-" * 80)
+            # Convert to ChatRoom objects
+            chat_rooms = []
+            for room_data in rooms_data:
+                chat_room = ChatRoom(
+                    room_type=room_type,
+                    name=room_data.get('name', 'Unknown'),
+                    create_time=room_data.get('create_time'),
+                    participants=room_data.get('participants', [])
+                )
+                chat_rooms.append(chat_room)
             
-            for i, room in enumerate(chat_rooms, 1):
-                print(f"Room {i}: {room.get('name', 'Unknown')}")
-                
-                # Format and display creation time
-                create_time = room.get('create_time')
-                if create_time:
-                    try:
-                        dt = datetime.fromisoformat(create_time.replace('Z', '+00:00'))
-                        formatted_time = dt.strftime("%Y-%m-%d %H:%M:%S UTC")
-                        print(f"  Created: {formatted_time}")
-                    except ValueError:
-                        print(f"  Created: {create_time}")
-                
-                # Display participants
-                participants = room.get('participants', [])
-                print(f"  Participants ({len(participants)}):")
-                
-                if participants:
-                    for participant in participants:
-                        screen_name = participant.get('screen_name', 'Unknown')
-                        user_id = participant.get('id', 'Unknown')
-                        print(f"    - {screen_name} (ID: {user_id})")
-                else:
-                    print("    - No participants")
-                
-                print("-" * 80)
+            # Display the rooms
+            self._display_chat_rooms(chat_rooms)
             
             return chat_rooms
             
         except requests.exceptions.ConnectionError:
-            print("Error: Could not connect to the server.")
+            print(f"Error: Could not connect to the server.")
             print(f"  Make sure the retro AIM server is running at: {self.base_url}")
             return None
         except requests.exceptions.HTTPError as e:
@@ -139,40 +140,73 @@ class RASRoomManager:
             print(f"  Raw response: {response.text}")
             return None
 
-    def create_chat_room(self, room_name, room_type):
+    def _display_chat_rooms(self, chat_rooms):
+        """
+        Display a list of ChatRoom objects in a formatted way.
+        
+        Args:
+            chat_rooms (list): List of ChatRoom objects to display
+        """
+        print(f"-" * 80)
+        
+        for i, room in enumerate(chat_rooms, 1):
+            print(f"Room {i}: {room.name}")
+            
+            # Format and display creation time
+            if room.create_time:
+                try:
+                    dt = datetime.fromisoformat(room.create_time.replace('Z', '+00:00'))
+                    formatted_time = dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+                    print(f"  Created: {formatted_time}")
+                except ValueError:
+                    print(f"  Created: {room.create_time}")
+            
+            # Display participants
+            print(f"  Participants ({len(room.participants)}):")
+            
+            if room.participants:
+                for participant in room.participants:
+                    screen_name = participant.get('screen_name', 'Unknown')
+                    user_id = participant.get('id', 'Unknown')
+                    print(f"    - {screen_name} (ID: {user_id})")
+            else:
+                print(f"    - No participants")
+            
+            print(f"-" * 80)
+
+    def create_chat_room(self, chat_room):
         """
         Creates a new chat room of the specified type.
         
         Args:
-            room_name (str): Name of the chat room to create
-            room_type (str): Either 'public' or 'private'
+            chat_room (ChatRoom): ChatRoom object with name and type
             
         Returns:
             bool: True if room was created successfully, False otherwise
         """
         # Check if trying to create private room (not supported)
-        if room_type == "private":
-            print("Error: Creating private chat rooms is not supported by the server.")
-            print("  Only public chat rooms can be created through the API.")
+        if chat_room.type == "private":
+            print(f"Error: Creating private chat rooms is not supported by the server.")
+            print(f"  Only public chat rooms can be created through the API.")
             return False
             
         # Validate room name
-        if not self._validate_room_name(room_name):
+        if not self._validate_room_name(chat_room.name):
             return False
         
         # Only proceed if room_type is public
-        rooms_endpoint = self._get_rooms_endpoint(room_type)
-        payload = {"name": room_name}
+        rooms_endpoint = self._get_rooms_endpoint(chat_room.type)
+        payload = {"name": chat_room.name}
         headers = {"Content-Type": "application/json"}
         
         try:
-            print(f"Creating {room_type} chat room: '{room_name}'")
+            print(f"Creating {chat_room.type} chat room: '{chat_room.name}'")
             print(f"Sending POST request to: {rooms_endpoint}")
             
             response = requests.post(rooms_endpoint, json=payload, headers=headers)
             
             if response.status_code == 201:
-                print(f"{room_type.capitalize()} chat room '{room_name}' created successfully!")
+                print(f"{chat_room.type.capitalize()} chat room '{chat_room.name}' created successfully!")
                 return True
             elif response.status_code == 400:
                 print(f"Bad request: Invalid input data.")
@@ -180,7 +214,7 @@ class RASRoomManager:
                     print(f"  Server response: {response.text}")
                 return False
             elif response.status_code == 409:
-                print(f"{room_type.capitalize()} chat room '{room_name}' already exists.")
+                print(f"{chat_room.type.capitalize()} chat room '{chat_room.name}' already exists.")
                 return False
             else:
                 print(f"Unexpected response status: {response.status_code}")
@@ -189,28 +223,27 @@ class RASRoomManager:
                 return False
                 
         except requests.exceptions.ConnectionError:
-            print("Error: Could not connect to the server.")
+            print(f"Error: Could not connect to the server.")
             print(f"  Make sure the retro AIM server is running at: {self.base_url}")
             return False
         except requests.exceptions.RequestException as e:
-            print(f"Error creating {room_type} chat room: {e}")
+            print(f"Error creating {chat_room.type} chat room: {e}")
             return False
         except Exception as e:
             print(f"Unexpected error: {e}")
             return False
 
-    def delete_chat_room(self, room_name, room_type):
+    def delete_chat_room(self, chat_room):
         """
         Deletes a chat room by directly removing it from the SQLite database.
         
         Args:
-            room_name (str): Name of the chat room to delete
-            room_type (str): Either 'public' or 'private' (for display purposes)
+            chat_room (ChatRoom): ChatRoom object with name and type
             
         Returns:
             bool: True if room was deleted successfully, False otherwise
         """
-        if not self._validate_room_name(room_name):
+        if not self._validate_room_name(chat_room.name):
             return False
         
         # Check if database file exists
@@ -228,11 +261,11 @@ class RASRoomManager:
             return False
         
         try:
-            print(f"Deleting {room_type} chat room: '{room_name}'")
+            print(f"Deleting {chat_room.type} chat room: '{chat_room.name}'")
             print(f"Executing direct database deletion...")
             
             # Escape single quotes for SQL safety
-            escaped_name = room_name.replace("'", "''")
+            escaped_name = chat_room.name.replace("'", "''")
             sql_query = "DELETE FROM chatRoom WHERE name = '" + escaped_name + "'"
             
             # Execute the sqlite command
@@ -255,10 +288,10 @@ class RASRoomManager:
             room_count = int(check_result.stdout.strip())
             
             if room_count == 0:
-                print(f"{room_type.capitalize()} chat room '{room_name}' deleted successfully!")
+                print(f"{chat_room.type.capitalize()} chat room '{chat_room.name}' deleted successfully!")
                 return True
             else:
-                print(f"Warning: Room '{room_name}' may not have existed or deletion failed.")
+                print(f"Warning: Room '{chat_room.name}' may not have existed or deletion failed.")
                 return False
                 
         except subprocess.CalledProcessError as e:
@@ -298,11 +331,11 @@ class RASRoomManager:
                 print(f"  File permissions: {stat.filemode(file_mode)}")
                 print(f"  Read access: {'Yes' if is_readable else 'No'}")
                 print(f"  Write access: {'Yes' if is_writable else 'No'}")
-                print("")
-                print("  Possible solutions:")
-                print("  - Run the script as a user with database access (e.g., sudo)")
+                print(f"")
+                print(f"  Possible solutions:")
+                print(f"  - Run the script as a user with database access (e.g., sudo)")
                 print(f"  - Change file permissions: sudo chmod 666 {self.sqlite_path}")
-                print("  - Add current user to the appropriate group")
+                print(f"  - Add current user to the appropriate group")
                 return False
             
             return True
@@ -394,19 +427,20 @@ Examples:
         room_name = args.room_name
         
         if not room_name:
-            print("Error: Room name is required for 'create' action.")
-            print("\nUsage examples:")
-            print("  python ras-room-mgr.py create public \"My Public Room\"")
+            print(f"Error: Room name is required for 'create' action.")
+            print(f"\nUsage examples:")
+            print(f"  python ras-room-mgr.py create public \"My Public Room\"")
             sys.exit(1)
         
         # Create the chat room
-        success = room_manager.create_chat_room(room_name, args.room_type)
+        chat_room = ChatRoom(room_type=args.room_type, name=room_name)
+        success = room_manager.create_chat_room(chat_room)
         
         if success:
             print(f"\nSuccessfully created {args.room_type} chat room: '{room_name}'")
-            print("\nYou can now:")
+            print(f"\nYou can now:")
             print(f"- Run 'python ras-room-mgr.py get {args.room_type}' to verify the room was created")
-            print("- Connect with an AIM client to join the room")
+            print(f"- Connect with an AIM client to join the room")
             sys.exit(0)
         else:
             print(f"\nFailed to create {args.room_type} chat room: '{room_name}'")
@@ -417,18 +451,19 @@ Examples:
         room_name = args.room_name
         
         if not room_name:
-            print("Error: Room name is required for 'delete' action.")
-            print("\nUsage examples:")
-            print("  python ras-room-mgr.py delete public \"Room to Delete\"")
-            print("  python ras-room-mgr.py delete private \"Private Room to Delete\"")
+            print(f"Error: Room name is required for 'delete' action.")
+            print(f"\nUsage examples:")
+            print(f"  python ras-room-mgr.py delete public \"Room to Delete\"")
+            print(f"  python ras-room-mgr.py delete private \"Private Room to Delete\"")
             sys.exit(1)
         
         # Delete the chat room
-        success = room_manager.delete_chat_room(room_name, args.room_type)
+        chat_room = ChatRoom(room_type=args.room_type, name=room_name)
+        success = room_manager.delete_chat_room(chat_room)
         
         if success:
             print(f"\nSuccessfully deleted {args.room_type} chat room: '{room_name}'")
-            print("\nYou can now:")
+            print(f"\nYou can now:")
             print(f"- Run 'python ras-room-mgr.py get {args.room_type}' to verify the room was deleted")
             sys.exit(0)
         else:
