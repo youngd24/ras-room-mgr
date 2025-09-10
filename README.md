@@ -45,7 +45,7 @@ A command-line tool for managing chat rooms on [Retro AIM Server](https://github
 # List all public chat rooms
 ./ras-room-mgr.py get public
 
-# List all private chat rooms
+# List all private chat rooms  
 ./ras-room-mgr.py get private
 
 # Create a new public chat room
@@ -106,7 +106,7 @@ If you encounter permission errors:
 # Option 1: Run with sudo
 sudo ./ras-room-mgr.py delete public "Room Name"
 
-# Option 2: Fix file permissions
+# Option 2: Fix file permissions  
 sudo chmod 666 /usr/local/ras/oscar.sqlite
 
 # Option 3: Add user to appropriate group
@@ -141,7 +141,7 @@ sudo usermod -a -G ras-group $USER
 # Development
 ./ras-room-mgr.py get public
 
-# Production
+# Production  
 ./ras-room-mgr.py --config-file production.ini get public
 
 # Testing
@@ -199,13 +199,27 @@ Successfully deleted public chat room: 'Old Room'
 The tool provides clear error messages for common issues:
 
 - **Server not running**: Connection refused errors with troubleshooting tips
-- **Permission issues**: Detailed permission analysis and fix suggestions
+- **Permission issues**: Detailed permission analysis and fix suggestions  
 - **Invalid room names**: Validation error messages
 - **API limitations**: Clear explanations when operations aren't supported
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests.
+
+### Development Standards
+
+- Code follows PEP 8 Python style guidelines
+- All functions include comprehensive docstrings
+- Changes should include appropriate test coverage
+- Run the regression test suite before submitting changes
+
+### Running Tests
+
+```bash
+# Validate your changes
+./test.py --script ./ras-room-mgr.py
+```
 
 ## License
 
